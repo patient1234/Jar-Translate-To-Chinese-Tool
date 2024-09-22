@@ -81,20 +81,19 @@ def process_jar(jar_path):
         # 处理JSON文件
         updated_data = process_json(z, json_path)
         
-        print("\n保存jar包...")
-        
         # 将原始内容和新更新的json文件写入新jar文件
         for item in z.infolist():
             if item.filename != json_path:
                 new_zip.writestr(item, z.read(item.filename))
             else:
-                new_zip.writestr(item.filename+f'.副[{bak}]本', z.read(item.filename))
+                new_zip.writestr(item.filename+f'.{bak}.副本', z.read(item.filename))
                 new_zip.writestr(item.filename, json.dumps(updated_data,ensure_ascii=False).replace(', ',',\n\n').replace(': ',':\n').encode('utf-8'))
         
-        if from_en==1:
-            new_zip.writestr(json_path+f'.副[{bak}]本', z.read(find_json_in_zip(z, 'en_us.json')))
+        if not find_json_in_zip(new_zip, 'zh_cn.json'):
+            new_zip.writestr(json_path+f'.{bak}.副本', z.read(find_json_in_zip(z, 'en_us.json')))
             new_zip.writestr(json_path, json.dumps(updated_data,ensure_ascii=False).replace(', ',',\n\n').replace(': ',':\n').encode('utf-8'))
 
+    print("\n保存jar包...")
     # 替换原始jar文件
     os.remove(jar_path)
     shutil.move(temp_zip_path, jar_path)
@@ -105,38 +104,97 @@ def scan_and_process_jars(directory):
             if filename.endswith('.jar'):
                 jar_path = os.path.join(root, filename)
                 print(f"\n开始处理{jar_path}...")
+                if select==1:
+                    process_jar(jar_path)
+                elif select==2:
+                    0
+                elif select==3:
                 
-                process_jar(jar_path)
+                    temp_zip_path = jar_path + '.tmp'
+                    with zipfile.ZipFile(jar_path, 'r') as z, zipfile.ZipFile(temp_zip_path, 'w') as new_zip:
+                        for f in z.infolist():
+                            if not f.filename.endswith(f".{bak}.副本"):
+                                new_zip.writestr(f, z.read(f.filename))
+                    
+                    # 替换原始jar文件
+                    print("\n保存jar包...")
+                    os.remove(jar_path)
+                    shutil.move(temp_zip_path, jar_path)
+                    
+                elif select==4:
                 
+                    temp_zip_path = jar_path + '.tmp'
+                    with zipfile.ZipFile(jar_path, 'r') as z, zipfile.ZipFile(temp_zip_path, 'w') as new_zip:
+                        for f in z.infolist():
+                            if not f.filename.endswith("zh_cn.json"):
+                                new_zip.writestr(f, z.read(f.filename))
+                    
+                    # 替换原始jar文件
+                    print("\n保存jar包...")
+                    os.remove(jar_path)
+                    shutil.move(temp_zip_path, jar_path)
+                    
                 print("处理完成")
 
 # 替换以下路径为你的目标目录
-print("\n开始寻找jar包...")
-
 directory_to_scan = '.'
 
-from_en_s=input("\n是否从英语文件开始翻译?(默认关闭)\n可配合自动翻译使用，无中文文件自动打开\n(y/n)>")
-while from_en_s!='y' and from_en_s!='' and from_en_s!='n':
-    from_en_s=input("\n是否从英语文件开始翻译?(默认关闭)\n可配合自动翻译使用，无中文文件自动打开\n(y/n)>")
-if from_en_s=='y':
-    from_en=1
+while True:
 
-auto_tips=""
-
-auto_s=input("\n是否自动翻译?(默认关闭)\n(y/n)>")
-while auto_s!='y' and auto_s!='' and auto_s!='n':
-    auto_s=input("\n是否自动翻译?(默认关闭)\n(y/n)>")
-if auto_s=='y':
-    auto=1
-    auto_tips="\n>>自动翻译已打开，建议设置此选项<<"
-
-only_en_s=input(f"\n是否只翻译没有中文的内容?(默认打开){auto_tips}\n(y/n)>")
-while only_en_s!='y' and only_en_s!='' and only_en_s!='n':
-    only_en_s=input(f"\n是否只翻译没有中文的内容?(默认打开){auto_tips}\n(y/n)>")
-if only_en_s=='n':
-    only_en=0
-
-bak=input(f"\n为副本取名，以便出错时替换{auto_tips}\n>")
-
-scan_and_process_jars(directory_to_scan)
-print("\n全部jar包处理完成")
+    select_t="\n1.开始翻译\n2.回退副本\n3.删除副本\n4.删除汉化\n5.退出\n>>"
+    
+    select=eval(input(select_t))
+    while select<1 or select>5 or select%1!=0:
+        select=eval(input(select_t))
+    
+    if select==1:
+        
+        from_en_t="\n是否从英语文件开始翻译?(默认关闭)\n可配合自动翻译使用，无中文文件自动打开\n(y/n)>"
+        
+        from_en_s=input(from_en_t)
+        while from_en_s!='y' and from_en_s!='' and from_en_s!='n':
+            from_en_s=input(from_en_t)
+        if from_en_s=='y':
+            from_en=1
+        
+        auto_tips=""
+        
+        auto_t="\n是否自动翻译?(默认关闭)\n(y/n)>"
+        
+        auto_s=input(auto_t)
+        while auto_s!='y' and auto_s!='' and auto_s!='n':
+            auto_s=input(auto_t)
+        if auto_s=='y':
+            auto=1
+            auto_tips="\n>>自动翻译已打开，建议设置此选项<<"
+        
+        only_en_t=f"\n是否只翻译没有中文的内容?(默认打开){auto_tips}\n(y/n)>"
+        
+        only_en_s=input(only_en_t)
+        while only_en_s!='y' and only_en_s!='' and only_en_s!='n':
+            only_en_s=input(only_en_t)
+        if only_en_s=='n':
+            only_en=0
+        
+        bak=input(f"\n为副本取名，以便出错时替换{auto_tips}\n>")
+        
+        scan_and_process_jars(directory_to_scan)
+    elif select==2:
+        print("暂时没做，紧急修改了BUG")
+    elif select==3:
+        
+        bak=input("\n输入要删除的副本名\n>")
+        scan_and_process_jars(directory_to_scan)
+        
+    elif select==4:
+        
+        from_en_t="\n确认删除汉化文件?\n(y/n)>"
+        
+        delete_s=input(from_en_t)
+        while delete_s!='y' and delete_s!='n':
+            delete_s=input(delete_t)
+        if delete_s=='y':
+            scan_and_process_jars(directory_to_scan)
+            
+    elif select==5:
+        break
